@@ -90,6 +90,7 @@ java_defaults {
     static_libs: [
         "vendor.lineage.health-V2-java",
         "vendor.lineage.livedisplay-V1-java",
+        "//hardware/oplus:vendor.lineage.thermal-V1-java",
         "vendor.lineage.touch-V1-java",
     ],
 }

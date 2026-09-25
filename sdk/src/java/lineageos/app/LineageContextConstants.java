@@ -75,6 +75,17 @@ public final class LineageContextConstants {
     public static final String LINEAGE_HEALTH_INTERFACE = "lineagehealth";
 
     /**
+     * Use with {@link android.content.Context#getSystemService} to retrieve a
+     * {@link lineageos.thermal.ThermalInterface} to access the thermal interface.
+     *
+     * @see android.content.Context#getSystemService
+     * @see lineageos.thermal.ThermalInterface
+     *
+     * @hide
+     */
+    public static final String LINEAGE_THERMAL_INTERFACE = "lineagethermal";
+
+    /**
      * Update power menu (GlobalActions)
      *
      * @hide

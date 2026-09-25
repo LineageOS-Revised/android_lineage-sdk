@@ -1406,6 +1406,18 @@ public final class LineageSettings {
         public static final Validator CHARGING_CONTROL_LIMIT_VALIDATOR =
                 new InclusiveIntegerRangeValidator(70, 100);
 
+        public static final String THERMAL_CPU_LIMIT = "thermal_cpu_limit";
+
+        /** @hide */
+        public static final Validator THERMAL_CPU_LIMIT_VALIDATOR =
+                new InclusiveIntegerRangeValidator(0, 95000);
+
+        public static final String THERMAL_BATTERY_LIMIT = "thermal_battery_limit";
+
+        /** @hide */
+        public static final Validator THERMAL_BATTERY_LIMIT_VALIDATOR =
+                new InclusiveIntegerRangeValidator(0, 45000);
+
         /**
          * Fast charging mode
          */
@@ -2184,6 +2196,8 @@ public final class LineageSettings {
             VALIDATORS.put(CHARGING_CONTROL_START_TIME, CHARGING_CONTROL_START_TIME_VALIDATOR);
             VALIDATORS.put(CHARGING_CONTROL_TARGET_TIME, CHARGING_CONTROL_TARGET_TIME_VALIDATOR);
             VALIDATORS.put(CHARGING_CONTROL_LIMIT, CHARGING_CONTROL_LIMIT_VALIDATOR);
+            VALIDATORS.put(THERMAL_CPU_LIMIT, THERMAL_CPU_LIMIT_VALIDATOR);
+            VALIDATORS.put(THERMAL_BATTERY_LIMIT, THERMAL_BATTERY_LIMIT_VALIDATOR);
             VALIDATORS.put(FAST_CHARGE_MODE, FAST_CHARGE_MODE_VALIDATOR);
             VALIDATORS.put(BATTERY_LIGHT_ENABLED, BATTERY_LIGHT_ENABLED_VALIDATOR);
             VALIDATORS.put(BATTERY_LIGHT_FULL_CHARGE_DISABLED,

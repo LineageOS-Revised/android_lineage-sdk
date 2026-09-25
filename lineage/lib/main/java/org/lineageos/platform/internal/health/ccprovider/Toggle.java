@@ -21,6 +21,7 @@ import android.os.BatteryUsageStats;
 import android.util.Log;
 
 import org.lineageos.platform.internal.R;
+import org.lineageos.platform.internal.health.ThermalGate;
 
 import vendor.lineage.health.ChargingControlSupportedMode;
 import vendor.lineage.health.IChargingControl;
@@ -197,6 +198,9 @@ public class Toggle extends ChargingControlProvider {
     }
 
     private boolean setChargingEnabled(boolean enabled) {
+        if (enabled && ThermalGate.isChargingBlocked(mContext)) {
+            enabled = false;
+        }
         try {
             if (mToggleSetAlways) {
                 mChargingControl.setChargingEnabled(enabled);
@@ -223,7 +227,7 @@ public class Toggle extends ChargingControlProvider {
     @Override
     protected void onReset() {
         try {
-            mChargingControl.setChargingEnabled(true);
+            mChargingControl.setChargingEnabled(!ThermalGate.isChargingBlocked(mContext));
             mIsLimitSet = false;
             mSavedTargetTime = 0;
             mEstimatedFullTime = 0;
