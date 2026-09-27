@@ -37,7 +37,7 @@ public class LineageDatabaseHelper extends SQLiteOpenHelper{
     private static final boolean LOCAL_LOGV = false;
 
     private static final String DATABASE_NAME = "lineagesettings.db";
-    private static final int DATABASE_VERSION = 24;
+    private static final int DATABASE_VERSION = 25;
 
     public static class LineageTableNames {
         public static final String TABLE_SYSTEM = "system";
@@ -353,6 +353,13 @@ public class LineageDatabaseHelper extends SQLiteOpenHelper{
             upgradeVersion = 24;
         }
 
+        if (upgradeVersion < 25) {
+            renameSetting(db, LineageTableNames.TABLE_SYSTEM,
+                    "status_bar_show_music_ticker",
+                    LineageSettings.System.STATUS_BAR_SHOW_DYNAMIC_ISLAND);
+            upgradeVersion = 25;
+        }
+
         // *** Remember to update DATABASE_VERSION above!
         if (upgradeVersion != newVersion) {
             Log.wtf(TAG, "warning: upgrading settings database to version "
@@ -385,6 +392,36 @@ public class LineageDatabaseHelper extends SQLiteOpenHelper{
                 deleteStmt.bindString(1, setting);
                 deleteStmt.execute();
             }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+            if (insertStmt != null) {
+                insertStmt.close();
+            }
+            if (deleteStmt != null) {
+                deleteStmt.close();
+            }
+        }
+    }
+
+    private void renameSetting(SQLiteDatabase db, String tableName, String oldName,
+            String newName) {
+        SQLiteStatement insertStmt = null;
+        SQLiteStatement deleteStmt = null;
+
+        db.beginTransaction();
+        try {
+            insertStmt = db.compileStatement("INSERT OR IGNORE INTO " + tableName
+                    + " (name,value) SELECT ?, value FROM " + tableName + " WHERE name=?");
+            deleteStmt = db.compileStatement("DELETE FROM " + tableName + " WHERE name=?");
+
+            insertStmt.bindString(1, newName);
+            insertStmt.bindString(2, oldName);
+            insertStmt.execute();
+
+            deleteStmt.bindString(1, oldName);
+            deleteStmt.execute();
+
             db.setTransactionSuccessful();
         } finally {
             db.endTransaction();
@@ -487,6 +524,30 @@ public class LineageDatabaseHelper extends SQLiteOpenHelper{
 
             loadIntegerSetting(stmt, LineageSettings.System.STATUS_BAR_CLOCK,
                     R.integer.def_clock_position);
+
+            loadBooleanSetting(stmt, LineageSettings.System.STATUS_BAR_SHOW_DYNAMIC_ISLAND,
+                    R.bool.def_status_bar_show_dynamic_island);
+
+            loadBooleanSetting(stmt, LineageSettings.System.STATUS_BAR_DYNAMIC_ISLAND_MEDIA_CONTROLS,
+                    R.bool.def_status_bar_dynamic_island_media_controls);
+
+            loadBooleanSetting(stmt, LineageSettings.System.STATUS_BAR_DYNAMIC_ISLAND_SCREEN_RECORDING,
+                    R.bool.def_status_bar_dynamic_island_screen_recording);
+
+            loadBooleanSetting(stmt, LineageSettings.System.STATUS_BAR_DYNAMIC_ISLAND_ALARMS,
+                    R.bool.def_status_bar_dynamic_island_alarms);
+
+            loadBooleanSetting(stmt, LineageSettings.System.STATUS_BAR_DYNAMIC_ISLAND_FLASHLIGHT,
+                    R.bool.def_status_bar_dynamic_island_flashlight);
+
+            loadBooleanSetting(stmt, LineageSettings.System.STATUS_BAR_DYNAMIC_ISLAND_STOPWATCH,
+                    R.bool.def_status_bar_dynamic_island_stopwatch);
+
+            loadBooleanSetting(stmt, LineageSettings.System.STATUS_BAR_DYNAMIC_ISLAND_LIVE_SCORES,
+                    R.bool.def_status_bar_dynamic_island_live_scores);
+
+            loadBooleanSetting(stmt, LineageSettings.System.STATUS_BAR_DYNAMIC_ISLAND_LYRICS,
+                    R.bool.def_status_bar_dynamic_island_lyrics);
 
             if (mContext.getResources().getBoolean(R.bool.def_notification_pulse_custom_enable)) {
                 loadStringSetting(stmt, LineageSettings.System.NOTIFICATION_LIGHT_PULSE_CUSTOM_VALUES,
