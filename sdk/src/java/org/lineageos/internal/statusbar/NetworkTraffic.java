@@ -24,6 +24,10 @@ import android.os.Handler;
 import android.os.Message;
 import android.os.SystemClock;
 import android.os.UserHandle;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
+import android.text.TextUtils;
+import android.text.style.AbsoluteSizeSpan;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.util.TypedValue;
@@ -79,6 +83,7 @@ public class NetworkTraffic extends TextView {
     private static final long AUTOHIDE_THRESHOLD_MEGABYTES = 80;
 
     private final int mTextSizeSingle;
+    private final int mTextSizeSingleCompact;
     private final int mTextSizeMulti;
     private final Handler mTrafficHandler;
     private final SettingsObserver mObserver;
@@ -125,6 +130,8 @@ public class NetworkTraffic extends TextView {
 
         final Resources resources = getResources();
         mTextSizeSingle = resources.getDimensionPixelSize(R.dimen.net_traffic_single_text_size);
+        mTextSizeSingleCompact = resources.getDimensionPixelSize(
+                R.dimen.net_traffic_single_compact_text_size);
         mTextSizeMulti = resources.getDimensionPixelSize(R.dimen.net_traffic_multi_text_size);
 
         mNetworkTrafficIsVisible = false;
@@ -205,6 +212,7 @@ public class NetworkTraffic extends TextView {
                         mMode == MODE_UPSTREAM_ONLY || mMode == MODE_UPSTREAM_AND_DOWNSTREAM;
                 final boolean showDownstream =
                         mMode == MODE_DOWNSTREAM_ONLY || mMode == MODE_UPSTREAM_AND_DOWNSTREAM;
+                final boolean singleDirection = showUpstream != showDownstream;
                 final boolean shouldHide = mAutoHide
                         && (!showUpstream || mTxKbps < mAutoHideThreshold)
                         && (!showDownstream || mRxKbps < mAutoHideThreshold);
@@ -214,29 +222,24 @@ public class NetworkTraffic extends TextView {
                     setVisibility(GONE);
                 } else {
                     // Get information for uplink ready so the line return can be added
-                    StringBuilder output = new StringBuilder();
+                    CharSequence output;
                     if (showUpstream) {
-                        output.append(formatOutput(mTxKbps));
-                    }
-
-                    // Ensure text size is where it needs to be
-                    int textSize;
-                    if (showUpstream && showDownstream) {
-                        output.append("\n");
-                        textSize = mTextSizeMulti;
+                        if (showDownstream) {
+                            output = formatOutput(mTxKbps) + "\n" + formatOutput(mRxKbps);
+                        } else {
+                            output = formatSingleDirectionOutput(mTxKbps);
+                        }
                     } else {
-                        textSize = mTextSizeSingle;
-                    }
-
-                    // Add information for downlink if it's called for
-                    if (showDownstream) {
-                        output.append(formatOutput(mRxKbps));
+                        output = formatSingleDirectionOutput(mRxKbps);
                     }
 
                     // Update view if there's anything new to show
-                    if (!output.toString().contentEquals(getText())) {
-                        setTextSize(TypedValue.COMPLEX_UNIT_PX, (float) textSize);
-                        setText(output.toString());
+                    if (!TextUtils.equals(output, getText())) {
+                        final int textSize = singleDirection && mShowUnits == SHOW_UNITS_OFF
+                                ? mTextSizeSingle : mTextSizeMulti;
+                        setTextSize(TypedValue.COMPLEX_UNIT_PX,
+                                (float) textSize);
+                        setText(output);
                     }
                     setVisibility(VISIBLE);
                 }
@@ -250,8 +253,34 @@ public class NetworkTraffic extends TextView {
             }
 
             private String formatOutput(long kbps) {
+                final FormattedOutput formattedOutput = getFormattedOutput(kbps);
+                if (mShowUnits > SHOW_UNITS_OFF && formattedOutput.unitResId != 0) {
+                    return formattedOutput.value + " "
+                            + mContext.getString(formattedOutput.unitResId);
+                } else {
+                    return formattedOutput.value;
+                }
+            }
+
+            private CharSequence formatSingleDirectionOutput(long kbps) {
+                final FormattedOutput formattedOutput = getFormattedOutput(kbps);
+                if (mShowUnits == SHOW_UNITS_OFF || formattedOutput.unitResId == 0) {
+                    return formattedOutput.value;
+                }
+
+                final String unit = mContext.getString(formattedOutput.unitResId);
+                final String output = formattedOutput.value + "\n" + unit;
+                final SpannableStringBuilder builder = new SpannableStringBuilder(output);
+                builder.setSpan(new AbsoluteSizeSpan(mTextSizeSingleCompact), 0,
+                        formattedOutput.value.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                builder.setSpan(new AbsoluteSizeSpan(mTextSizeMulti),
+                        formattedOutput.value.length() + 1, output.length(),
+                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                return builder;
+            }
+
+            private FormattedOutput getFormattedOutput(long kbps) {
                 final String value;
-                final String unit;
                 int unitid = 0;
                 switch (mUnits) {
                     case UNITS_KILOBITS:
@@ -265,39 +294,32 @@ public class NetworkTraffic extends TextView {
                     case UNITS_KILOBYTES:
                     case UNITS_AUTOBYTES:
                         if (kbps < 8000 || mUnits == UNITS_KILOBYTES) {
-                            value = String.format("%.0f", (float) kbps / 8 );
+                            value = String.format("%.0f", (float) kbps / 8);
                             unitid = mShowUnits == SHOW_UNITS_COMPACT
-                                ? R.string.kilobytespersecond_compact
-                                : R.string.kilobytespersecond_short;
+                                    ? R.string.kilobytespersecond_compact
+                                    : R.string.kilobytespersecond_short;
                             break;
                         }
                     case UNITS_MEGABYTES:
-                        {
-                            final String format;
-                            if (kbps < 80000) {
-                                format = "%.2f";
-                            } else if (kbps < 800000) {
-                                format = "%.1f";
-                            } else {
-                                format = "%.0f";
-                            }
-                            value = String.format(format, (float) kbps / 8000 );
+                        final String format;
+                        if (kbps < 80000) {
+                            format = "%.2f";
+                        } else if (kbps < 800000) {
+                            format = "%.1f";
+                        } else {
+                            format = "%.0f";
                         }
+                        value = String.format(format, (float) kbps / 8000);
                         unitid = mShowUnits == SHOW_UNITS_COMPACT
-                            ? R.string.megabytespersecond_compact
-                            : R.string.megabytespersecond_short;
+                                ? R.string.megabytespersecond_compact
+                                : R.string.megabytespersecond_short;
                         break;
                     default:
                         value = "unknown";
                         break;
                 }
 
-                if (mShowUnits > SHOW_UNITS_OFF && unitid != 0) {
-                    unit = mContext.getString(unitid);
-                    return value + " " + unit;
-                } else {
-                    return value;
-                }
+                return new FormattedOutput(value, unitid);
             }
         };
         mObserver = new SettingsObserver(mTrafficHandler);
@@ -512,14 +534,12 @@ public class NetworkTraffic extends TextView {
 
     private void updateTrafficDrawable() {
         final int drawableResId;
-        if (mHideArrows) {
+        if (mHideArrows
+                || mMode == MODE_UPSTREAM_ONLY
+                || mMode == MODE_DOWNSTREAM_ONLY) {
             drawableResId = 0;
         } else if (mMode == MODE_UPSTREAM_AND_DOWNSTREAM) {
             drawableResId = R.drawable.stat_sys_network_traffic_updown;
-        } else if (mMode == MODE_UPSTREAM_ONLY) {
-            drawableResId = R.drawable.stat_sys_network_traffic_up;
-        } else if (mMode == MODE_DOWNSTREAM_ONLY) {
-            drawableResId = R.drawable.stat_sys_network_traffic_down;
         } else {
             drawableResId = 0;
         }
@@ -551,6 +571,16 @@ public class NetworkTraffic extends TextView {
 
         public LinkProperties getLinkProperties() {
             return mLinkProperties;
+        }
+    }
+
+    private static class FormattedOutput {
+        private final String value;
+        private final int unitResId;
+
+        FormattedOutput(String value, int unitResId) {
+            this.value = value;
+            this.unitResId = unitResId;
         }
     }
 }
