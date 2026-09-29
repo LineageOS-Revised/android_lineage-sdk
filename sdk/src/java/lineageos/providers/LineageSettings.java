@@ -3099,6 +3099,14 @@ public final class LineageSettings {
 
         /** @hide */
         public static final Validator BERRY_BLACK_THEME_VALIDATOR = sBooleanValidator;
+
+        /**
+         * Selected UDFPS fingerprint animation overlay package name, or null for the default.
+         */
+        public static final String UDFPS_ANIMATION_STYLE = "udfps_animation_style";
+
+        /** @hide */
+        public static final Validator UDFPS_ANIMATION_STYLE_VALIDATOR = sNonNullStringValidator;
         // endregion
 
         /**
@@ -3121,6 +3129,7 @@ public final class LineageSettings {
                 new ArrayMap<String, Validator>();
         static {
             VALIDATORS.put(BERRY_BLACK_THEME, BERRY_BLACK_THEME_VALIDATOR);
+            VALIDATORS.put(UDFPS_ANIMATION_STYLE, UDFPS_ANIMATION_STYLE_VALIDATOR);
             VALIDATORS.put(GESTURE_BACK_EXCLUDE_TOP, GESTURE_BACK_EXCLUDE_TOP_VALIDATOR);
             VALIDATORS.put(NETWORK_TRAFFIC_MODE, NETWORK_TRAFFIC_MODE_VALIDATOR);
             VALIDATORS.put(NETWORK_TRAFFIC_POSITION, NETWORK_TRAFFIC_POSITION_VALIDATOR);
