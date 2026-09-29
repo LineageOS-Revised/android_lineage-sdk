@@ -113,6 +113,7 @@ public class ThermalController {
         }
         LineageSettings.System.putInt(mResolver,
                 LineageSettings.System.THERMAL_BATTERY_LIMIT, millidegC);
+        Log.i(TAG, "Battery limit " + millidegC);
         if (millidegC > 0) {
             registerBatteryReceiver();
         } else {
@@ -132,6 +133,7 @@ public class ThermalController {
     private void applyCpuLimit(int millidegC) {
         IThermalControl control = getThermalControl();
         if (control == null) {
+            Log.w(TAG, "No thermal HAL, cannot apply CPU limit");
             return;
         }
         try {
@@ -140,6 +142,7 @@ public class ThermalController {
             } else {
                 control.clearCpuLimit();
             }
+            Log.i(TAG, "CPU limit " + millidegC);
         } catch (RemoteException e) {
             mThermalControl = null;
             Log.e(TAG, "Failed to apply CPU limit", e);
@@ -157,7 +160,10 @@ public class ThermalController {
             return;
         }
         try {
-            control.setChargingEnabled(false);
+            if (!mBatteryBlocked || control.getChargingEnabled()) {
+                control.setChargingEnabled(false);
+                Log.i(TAG, "Charging blocked by battery limit");
+            }
             mBatteryBlocked = true;
         } catch (RemoteException e) {
             mChargingControl = null;
@@ -170,6 +176,7 @@ public class ThermalController {
         if (mBatteryBlocked && control != null && !isChargingControlEnabled()) {
             try {
                 control.setChargingEnabled(true);
+                Log.i(TAG, "Charging resumed");
             } catch (RemoteException e) {
                 mChargingControl = null;
                 Log.e(TAG, "Failed to resume charging", e);
@@ -187,6 +194,8 @@ public class ThermalController {
         if (mBatteryBlocked) {
             if (millidegC <= limit - HYSTERESIS) {
                 unblockCharging();
+            } else {
+                blockCharging();
             }
         } else if (millidegC >= limit) {
             blockCharging();
